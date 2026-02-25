@@ -1,0 +1,17 @@
+# Media files — add your own, don't commit large binaries
+tunes/*
+!tunes/.gitkeep
+videoloop/*
+!videoloop/.gitkeep
+output/*
+!output/.gitkeep
+
+# Claude Code session data
+.claude/
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
