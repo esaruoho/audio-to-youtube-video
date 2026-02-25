@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
 Batch YouTube video creator
-Loops a short video clip for the full duration of each audio file,
-then muxes them into a YouTube-ready 1080p MP4.
+Uses a looping video clip OR a still image as the background for the full
+duration of each audio file, then muxes them into a YouTube-ready 1080p MP4.
 
 Usage:
     python3 make_videos.py [options]
 
 Defaults (auto-detected from this repo layout):
     Audio folder : ./tunes/
-    Video loop   : ./videoloop/goldfat looping.mp4
+    Background   : ./videoloop/goldfat looping.mp4
     Output folder: ./output/
 """
 
@@ -20,11 +20,12 @@ import argparse
 from pathlib import Path
 
 AUDIO_EXTENSIONS = {".mp3", ".wav", ".flac", ".m4a", ".ogg", ".aac"}
+IMAGE_EXTENSIONS  = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp"}
 
 # ── Defaults (relative to this script's directory) ───────────────────────────
 SCRIPT_DIR = Path(__file__).parent
-DEFAULT_AUDIO_FOLDER = SCRIPT_DIR / "tunes"
-DEFAULT_VIDEO_LOOP   = SCRIPT_DIR / "videoloop" / "goldfat looping.mp4"
+DEFAULT_AUDIO_FOLDER  = SCRIPT_DIR / "tunes"
+DEFAULT_BACKGROUND    = SCRIPT_DIR / "videoloop" / "goldfat looping.mp4"
 DEFAULT_OUTPUT_FOLDER = SCRIPT_DIR / "output"
 
 
@@ -43,7 +44,7 @@ def get_duration(path: str) -> float:
 
 
 def build_ffmpeg_cmd(
-    video_loop: str,
+    background: str,
     audio_path: str,
     output_path: str,
     duration: float,
@@ -51,14 +52,15 @@ def build_ffmpeg_cmd(
     crf: int,
     audio_bitrate: str,
 ) -> list[str]:
+    is_image = Path(background).suffix.lower() in IMAGE_EXTENSIONS
+    bg_input = ["-loop", "1", "-i", background] if is_image else ["-stream_loop", "-1", "-i", background]
     return [
         "ffmpeg", "-y",
         # ── Inputs ──────────────────────────────────────────────────────────
-        "-stream_loop", "-1",   # loop the video indefinitely
-        "-i", video_loop,       # input 0: video
+        *bg_input,              # input 0: still image or looping video
         "-i", audio_path,       # input 1: audio
         # ── Stream selection ────────────────────────────────────────────────
-        "-map", "0:v:0",        # video from looped clip
+        "-map", "0:v:0",        # video from background
         "-map", "1:a:0",        # audio from audio file
         # ── Duration: stop when audio ends ──────────────────────────────────
         "-t", str(duration),
@@ -83,7 +85,7 @@ def build_ffmpeg_cmd(
 
 
 def process_file(
-    video_loop: str,
+    background: str,
     audio_path: Path,
     output_folder: Path,
     preset: str,
@@ -105,7 +107,7 @@ def process_file(
         return False
 
     cmd = build_ffmpeg_cmd(
-        video_loop, str(audio_path), str(output_path),
+        background, str(audio_path), str(output_path),
         duration, preset, crf, audio_bitrate,
     )
 
@@ -135,8 +137,8 @@ def main() -> None:
         help=f"Folder of audio files (default: {DEFAULT_AUDIO_FOLDER})",
     )
     parser.add_argument(
-        "--video-loop", "-v", default=str(DEFAULT_VIDEO_LOOP),
-        help=f"Looping video clip (default: {DEFAULT_VIDEO_LOOP})",
+        "--background", "-v", default=str(DEFAULT_BACKGROUND),
+        help=f"Looping video clip or still image (.jpg/.png/etc) (default: {DEFAULT_BACKGROUND})",
     )
     parser.add_argument(
         "--output", "-o", default=str(DEFAULT_OUTPUT_FOLDER),
@@ -167,14 +169,14 @@ def main() -> None:
     args = parser.parse_args()
 
     audio_folder  = Path(args.audio_folder)
-    video_loop    = args.video_loop
+    background    = args.background
     output_folder = Path(args.output)
 
     # ── Validate ──────────────────────────────────────────────────────────────
     if not audio_folder.is_dir():
         sys.exit(f"ERROR: Audio folder not found: {audio_folder}")
-    if not Path(video_loop).is_file():
-        sys.exit(f"ERROR: Video loop not found: {video_loop}")
+    if not Path(background).is_file():
+        sys.exit(f"ERROR: Background file not found: {background}")
 
     audio_files = sorted(
         f for f in audio_folder.iterdir()
@@ -187,7 +189,7 @@ def main() -> None:
 
     # ── Summary ───────────────────────────────────────────────────────────────
     print(f"Audio folder : {audio_folder}")
-    print(f"Video loop   : {video_loop}")
+    print(f"Background   : {background}")
     print(f"Output folder: {output_folder}")
     print(f"Tracks found : {len(audio_files)}")
     print(f"Preset/CRF   : {args.preset} / {args.crf}")
@@ -198,7 +200,7 @@ def main() -> None:
     for i, audio_file in enumerate(audio_files, 1):
         print(f"[{i}/{len(audio_files)}] {audio_file.name}")
         ok = process_file(
-            video_loop, audio_file, output_folder,
+            background, audio_file, output_folder,
             args.preset, args.crf, args.audio_bitrate,
             args.dry_run, args.skip_existing,
         )

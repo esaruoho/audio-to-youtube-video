@@ -24,8 +24,8 @@ audio-to-youtube-video/
 ├── Make Videos.command     # macOS double-click launcher
 ├── tunes/                  # ← put your audio files here
 │   └── (add .mp3 / .wav / .flac / .m4a / .ogg / .aac files)
-├── videoloop/              # ← put your looping video clip here
-│   └── (add one .mp4 file, e.g. "my loop.mp4")
+├── videoloop/              # ← put your background here (video OR image)
+│   └── (add one .mp4 looping clip, or a .jpg / .png still image)
 └── output/                 # finished videos appear here (auto-created)
 ```
 
@@ -70,7 +70,7 @@ python3 make_videos.py --dry-run
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
 | `--audio-folder` | `-a` | `./tunes` | Folder containing audio files |
-| `--video-loop` | `-v` | `./videoloop/goldfat looping.mp4` | Looping video clip |
+| `--background` | `-v` | `./videoloop/goldfat looping.mp4` | Looping video clip **or** still image (`.jpg`, `.png`, etc.) |
 | `--output` | `-o` | `./output` | Output folder |
 | `--preset` | | `slow` | x264 preset (`ultrafast` → `veryslow`). Slower = smaller file |
 | `--crf` | | `18` | Quality 0–51, lower = better (18 is near-lossless) |
